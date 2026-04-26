@@ -76,12 +76,16 @@ def _cfs_status(cfs: float, river: RiverConfig) -> str:
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    # Warm up all rivers on startup
-    for river_id in RIVERS:
-        try:
-            get_results(river_id)
-        except Exception as e:
-            print(f"Warning: could not warm up {river_id}: {e}")
+    # Warm up runs in a background thread so the port binds immediately
+    import asyncio, concurrent.futures
+    def _warmup():
+        for river_id in RIVERS:
+            try:
+                get_results(river_id)
+            except Exception as e:
+                print(f"Warning: could not warm up {river_id}: {e}")
+    loop = asyncio.get_event_loop()
+    loop.run_in_executor(concurrent.futures.ThreadPoolExecutor(max_workers=1), _warmup)
     yield
 
 
