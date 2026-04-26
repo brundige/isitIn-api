@@ -12,8 +12,10 @@ from datetime import datetime, timedelta
 import json
 from pathlib import Path
 
+import os
+
 import pandas as pd
-from fastapi import FastAPI, HTTPException
+from fastapi import FastAPI, Header, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import HTMLResponse
 from pydantic import BaseModel
@@ -68,7 +70,6 @@ def _cfs_status(cfs: float, river: RiverConfig) -> str:
     elif river.sweet_spot_min <= cfs <= river.sweet_spot_max:
         return "SWEET SPOT"
     return "RUNNABLE"
-
 
 # ---------------------------------------------------------------------------
 # App lifecycle
@@ -292,6 +293,49 @@ def refresh(river_id: str):
         raise HTTPException(status_code=404, detail="River not found")
     get_results(river_id, force=True)
     return {"refreshed_at": _caches[river_id]["updated_at"].isoformat()}
+
+
+# ---------------------------------------------------------------------------
+# Push endpoint — local machine computes predictions and pushes here
+# ---------------------------------------------------------------------------
+
+class PushPayload(BaseModel):
+    current_cfs:        float
+    metrics:            dict
+    daily:              str   # DataFrame as JSON (orient='split')
+    hourly:             str
+    gauge_hist:         str   # trimmed to last 7 days
+    holdout_comparison: str
+
+
+@app.post("/rivers/{river_id}/push")
+def push_results(
+    river_id: str,
+    payload: PushPayload,
+    x_push_key: str = Header(None),
+):
+    push_key = os.environ.get("PUSH_KEY")
+    if push_key and x_push_key != push_key:
+        raise HTTPException(status_code=401, detail="Invalid push key")
+    if river_id not in RIVERS:
+        raise HTTPException(status_code=404, detail="River not found")
+
+    def load_df(json_str: str) -> pd.DataFrame:
+        df = pd.read_json(json_str, orient="split")
+        df.index = pd.to_datetime(df.index)
+        return df
+
+    _caches[river_id]["results"] = {
+        "current_cfs":        payload.current_cfs,
+        "metrics":            payload.metrics,
+        "daily":              load_df(payload.daily),
+        "hourly":             load_df(payload.hourly),
+        "gauge_hist":         load_df(payload.gauge_hist),
+        "holdout_comparison": load_df(payload.holdout_comparison),
+    }
+    _caches[river_id]["updated_at"] = datetime.now()
+    return {"status": "ok", "river_id": river_id,
+            "updated_at": _caches[river_id]["updated_at"].isoformat()}
 
 
 # ---------------------------------------------------------------------------
