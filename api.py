@@ -321,7 +321,8 @@ def push_results(
         raise HTTPException(status_code=404, detail="River not found")
 
     def load_df(json_str: str) -> pd.DataFrame:
-        df = pd.read_json(json_str, orient="split")
+        from io import StringIO
+        df = pd.read_json(StringIO(json_str), orient="split")
         df.index = pd.to_datetime(df.index)
         return df
 
