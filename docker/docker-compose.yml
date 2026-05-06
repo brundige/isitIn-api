@@ -1,0 +1,22 @@
+services:
+  api:
+    build:
+      context: ..
+      dockerfile: docker/Dockerfile
+    env_file:
+      - ../.env
+    volumes:
+      # Persists SQLite db + parquet caches + ML model artifacts across rebuilds
+      - ../cache:/app/cache
+    restart: unless-stopped
+    # No `ports:` exposure — cloudflared reaches it via the internal network only.
+
+  cloudflared:
+    image: cloudflare/cloudflared:latest
+    command: tunnel --config /etc/cloudflared/config.yml run
+    volumes:
+      - ./cloudflared.yml:/etc/cloudflared/config.yml:ro
+      - ${HOME}/.cloudflared/dabe41e8-201f-4154-a20e-4ca2c366c9d8.json:/etc/cloudflared/dabe41e8-201f-4154-a20e-4ca2c366c9d8.json:ro
+    depends_on:
+      - api
+    restart: unless-stopped

@@ -1,0 +1,15 @@
+.git
+../.gitignore
+__pycache__
+*.pyc
+*.pyo
+.env
+cache/
+Frontend/
+*.png
+*.html
+*.pt
+push_predictions.py
+main.py
+package-lock.json
+Procfile

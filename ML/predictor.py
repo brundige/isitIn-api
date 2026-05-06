@@ -18,6 +18,8 @@ import lightgbm as lgb
 import matplotlib.pyplot as plt
 import matplotlib.dates as mdates
 
+from Backend import db
+
 # ---------------------------------------------------------------------------
 # Config
 # ---------------------------------------------------------------------------
@@ -43,10 +45,9 @@ SOIL_MOISTURE_TAU = 168  # hours (1 week memory)
 PRECIP_LAG_WINDOWS = [6, 12, 24, 48, 72]
 ANTECEDENT_WINDOWS = [7 * 24, 14 * 24]  # 7-day, 14-day soil saturation
 
-# Data cache — avoids hammering USGS / Open-Meteo on every run
+# Data cache — avoids hammering USGS / Open-Meteo on every run.
+# Storage backend lives in db.py (SQLite at cache/isitin.db).
 CACHE_DIR = "cache"
-GAUGE_CACHE = os.path.join(CACHE_DIR, "gauge.parquet")
-PRECIP_CACHE = os.path.join(CACHE_DIR, "precip.parquet")
 CACHE_MAX_AGE_HOURS = 1   # refetch if cache is older than this
 
 # Minimum predicted CFS — prevents autoregressive collapse during dry forecasts
@@ -149,46 +150,46 @@ def fetch_precip_forecast(lat: float, lon: float, days: int = 7) -> pd.DataFrame
 
 
 # ---------------------------------------------------------------------------
-# Data cache
+# Data cache (SQLite, see db.py)
 # ---------------------------------------------------------------------------
 
-def _cache_is_fresh(path: str) -> bool:
-    if not os.path.exists(path):
-        return False
-    age_h = (datetime.now().timestamp() - os.path.getmtime(path)) / 3600
-    return age_h < CACHE_MAX_AGE_HOURS
+def _cache_age_hours(river_id: str, kind: str) -> float | None:
+    ts = db.cache_updated_at(river_id, kind)
+    if ts is None:
+        return None
+    return (datetime.now() - ts).total_seconds() / 3600
 
 
-def load_or_fetch_gauge(gauge_id: str, start: datetime, end: datetime,
+def load_or_fetch_gauge(river_id: str, gauge_id: str,
+                        start: datetime, end: datetime,
                         verbose: bool = True,
-                        cache_path: str = GAUGE_CACHE,
                         param: str = "00060") -> pd.DataFrame:
-    if _cache_is_fresh(cache_path):
+    column_name = "stage" if param == "00065" else "cfs"
+    if db.is_cache_fresh(river_id, "gauge", CACHE_MAX_AGE_HOURS):
         if verbose:
-            age_h = (datetime.now().timestamp() - os.path.getmtime(cache_path)) / 3600
+            age_h = _cache_age_hours(river_id, "gauge") or 0.0
             print(f"  Gauge: loaded from cache (age {age_h:.1f}h)")
-        return pd.read_parquet(cache_path)
+        return db.load_gauge(river_id, column_name)
     if verbose:
         print(f"  Gauge: fetching from USGS API (param {param})...")
     df = fetch_usgs_gauge(gauge_id, start, end, param=param)
-    os.makedirs(CACHE_DIR, exist_ok=True)
-    df.to_parquet(cache_path)
+    db.save_gauge(river_id, df, column_name)
     return df
 
 
-def load_or_fetch_precip(lat: float, lon: float, start: datetime, end: datetime,
-                         verbose: bool = True,
-                         cache_path: str = PRECIP_CACHE) -> pd.DataFrame:
-    if _cache_is_fresh(cache_path):
+def load_or_fetch_precip(river_id: str,
+                         lat: float, lon: float,
+                         start: datetime, end: datetime,
+                         verbose: bool = True) -> pd.DataFrame:
+    if db.is_cache_fresh(river_id, "precip", CACHE_MAX_AGE_HOURS):
         if verbose:
-            age_h = (datetime.now().timestamp() - os.path.getmtime(cache_path)) / 3600
+            age_h = _cache_age_hours(river_id, "precip") or 0.0
             print(f"  Precip: loaded from cache (age {age_h:.1f}h)")
-        return pd.read_parquet(cache_path)
+        return db.load_precip(river_id)
     if verbose:
         print(f"  Precip: fetching from Open-Meteo API...")
     df = fetch_precip_history(lat, lon, start, end)
-    os.makedirs(CACHE_DIR, exist_ok=True)
-    df.to_parquet(cache_path)
+    db.save_precip(river_id, df)
     return df
 
 
@@ -482,21 +483,16 @@ def _row_status(row, runnable_min: int, runnable_max: int) -> str:
 
 
 # ---------------------------------------------------------------------------
-# Model persistence
+# Model persistence (SQLite, see db.py)
 # ---------------------------------------------------------------------------
 
-MODEL_PATH = "tellico_model.joblib"
+def save_model(model: lgb.LGBMRegressor, river_id: str = "tellico"):
+    db.save_model(river_id, model)
+    print(f"  Model saved → db (river_id={river_id})")
 
 
-def save_model(model: lgb.LGBMRegressor, path: str = MODEL_PATH):
-    joblib.dump(model, path)
-    print(f"  Model saved → {path}")
-
-
-def load_model(path: str = MODEL_PATH):
-    if not os.path.exists(path):
-        return None
-    return joblib.load(path)
+def load_model(river_id: str = "tellico"):
+    return db.load_model(river_id)
 
 
 # ---------------------------------------------------------------------------
@@ -517,10 +513,10 @@ def run_prediction(retrain: bool = False, verbose: bool = True, plot: bool = Fal
     """
     # Default to Tellico for backward compat
     if river is None:
-        from rivers import RIVERS
+        from ML.rivers import RIVERS
         river = RIVERS["tellico"]
 
-    from rivers import stage_to_visual
+    from ML.rivers import stage_to_visual
 
     gauge_id       = river.gauge_id
     watershed_lat  = river.watershed_lat
@@ -531,9 +527,6 @@ def run_prediction(retrain: bool = False, verbose: bool = True, plot: bool = Fal
     sweet_max      = river.sweet_spot_max
     baseflow_min   = river.baseflow_min
     value_col      = river.target_param   # "cfs" or "stage"
-    model_path     = f"{river.id}_model.joblib"
-    gauge_cache    = os.path.join(CACHE_DIR, f"{river.id}_gauge.parquet")
-    precip_cache   = os.path.join(CACHE_DIR, f"{river.id}_precip.parquet")
     usgs_param     = "00065" if value_col == "stage" else "00060"
 
     now = datetime.now()
@@ -544,13 +537,13 @@ def run_prediction(retrain: bool = False, verbose: bool = True, plot: bool = Fal
         print(f"Gauge: USGS {gauge_id}")
         print(f"{'=' * 60}")
 
-    saved = None if retrain else load_model(model_path)
+    saved = None if retrain else load_model(river.id)
 
     if verbose:
         print(f"Loading {HISTORY_DAYS}-day gauge history...")
     gauge_hist = load_or_fetch_gauge(
-        gauge_id, history_start, now, verbose=verbose,
-        cache_path=gauge_cache, param=usgs_param,
+        river.id, gauge_id, history_start, now,
+        verbose=verbose, param=usgs_param,
     )
     if verbose:
         print(f"    {len(gauge_hist):,} hourly readings "
@@ -560,8 +553,8 @@ def run_prediction(retrain: bool = False, verbose: bool = True, plot: bool = Fal
     if verbose:
         print(f"Loading precipitation history...")
     precip_hist = load_or_fetch_precip(
-        watershed_lat, watershed_lon, history_start, now,
-        verbose=verbose, cache_path=precip_cache
+        river.id, watershed_lat, watershed_lon, history_start, now,
+        verbose=verbose,
     )
     if verbose:
         total_precip = precip_hist["precip_mm"].sum() / 25.4
@@ -576,13 +569,13 @@ def run_prediction(retrain: bool = False, verbose: bool = True, plot: bool = Fal
     if saved:
         model = saved
         if verbose:
-            print(f"  Loaded saved model from {model_path}")
+            print(f"  Loaded saved model from db (river_id={river.id})")
         train_metrics = {"n_train": 0}
     else:
         if verbose:
             print(f"Training LightGBM...")
         model, train_metrics = train_model(features_df, verbose=verbose)
-        save_model(model, model_path)
+        save_model(model, river.id)
 
     holdout_metrics, holdout_comparison = evaluate_holdout(model, features_df)
     metrics = {**train_metrics, **holdout_metrics}

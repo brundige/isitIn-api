@@ -1,0 +1,21 @@
+.git
+.idea
+.claude
+.venv
+__pycache__
+*.pyc
+.DS_Store
+
+# Build artifacts that get rebuilt inside the image
+Frontend/node_modules
+Frontend/dist
+Frontend/.vite
+
+# Local-only state we don't want baking into the image (it's mounted as a volume)
+cache/
+
+# The old React Native source we archived during the PWA pivot
+Frontend-rn-archive/
+
+# Don't recursively bundle the Docker build context into itself
+docker/cloudflared.yml

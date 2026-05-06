@@ -6,16 +6,25 @@ Cron (every 4 hours):
     0 */4 * * * cd /Users/chrisbrundige/PycharmProjects/isItIn && python push_predictions.py >> /tmp/isitIn_push.log 2>&1
 """
 import os
-import json
 from datetime import datetime, timedelta
+from pathlib import Path
 
 import numpy as np
 import requests
 
-from rivers import RIVERS
-from tellico_predictor import run_prediction
+# Load .env from the same directory as this script
+_env = Path(__file__).parent / ".env"
+if _env.exists():
+    for line in _env.read_text().splitlines():
+        line = line.strip()
+        if line and not line.startswith("#") and "=" in line:
+            k, v = line.split("=", 1)
+            os.environ.setdefault(k.strip(), v.strip())
 
-API_BASE = os.environ.get("RENDER_API", "https://isitin-api.onrender.com")
+from ML.rivers import RIVERS
+from ML.predictor import run_prediction
+
+API_BASE = os.environ.get("RENDER_API", "https://api.brundigital.io")
 PUSH_KEY = os.environ.get("PUSH_KEY", "")
 
 
@@ -71,7 +80,9 @@ if __name__ == "__main__":
     print(f"Push run started at {datetime.now():%Y-%m-%d %H:%M:%S}")
     print(f"Target: {API_BASE}")
     print(f"{'='*50}")
-    for river_id in RIVERS:
+    for river_id, river in RIVERS.items():
+        if river.kind != "gauge":
+            continue
         try:
             push_river(river_id)
         except Exception as e:

@@ -1,0 +1,29 @@
+.legend {
+  display: flex;
+  flex-direction: row;
+  flex-wrap: wrap;
+  padding: 0 16px;
+  gap: 8px;
+  margin-top: 8px;
+}
+
+.legend__chip {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  gap: 6px;
+  padding: 8px 14px;
+  border-radius: 50px;
+  border: 1.5px solid;
+  background-color: var(--card);
+}
+
+.legend__emoji {
+  font-size: 16px;
+}
+
+.legend__label {
+  font-size: 13px;
+  font-weight: 600;
+  letter-spacing: 0.3px;
+}

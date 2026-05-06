@@ -1,0 +1,152 @@
+.modal-overlay {
+  position: fixed;
+  inset: 0;
+  background-color: rgba(0, 0, 0, 0.6);
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-end;
+  z-index: 50;
+  animation: fadeIn 0.2s ease;
+}
+
+.modal-sheet {
+  background-color: var(--card);
+  border-top-left-radius: 20px;
+  border-top-right-radius: 20px;
+  padding: 0 20px 40px;
+  max-height: 85vh;
+  overflow-y: auto;
+  animation: slideUp 0.25s ease;
+  padding-bottom: calc(40px + env(safe-area-inset-bottom));
+}
+
+.modal-handle {
+  width: 36px;
+  height: 4px;
+  background-color: var(--card-border);
+  border-radius: 2px;
+  margin: 10px auto 16px;
+}
+
+.modal-header {
+  display: flex;
+  flex-direction: row;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 20px;
+}
+
+.modal-title {
+  color: var(--text-primary);
+  font-size: 20px;
+  font-weight: 700;
+}
+
+.modal-close {
+  color: var(--text-muted);
+  font-size: 18px;
+  padding: 4px;
+}
+
+.modal-form {
+  display: flex;
+  flex-direction: column;
+}
+
+.modal-label {
+  color: var(--text-muted);
+  font-size: 11px;
+  letter-spacing: 1.5px;
+  text-transform: uppercase;
+  margin-bottom: 6px;
+  margin-top: 14px;
+}
+
+.modal-required {
+  color: var(--blue);
+}
+
+.modal-input {
+  background-color: var(--bg);
+  border: 1px solid var(--card-border);
+  border-radius: 10px;
+  padding: 12px 14px;
+  color: var(--text-primary);
+  font-size: 15px;
+  outline: none;
+  font-family: inherit;
+}
+
+.modal-input:focus {
+  border-color: var(--blue);
+}
+
+.modal-textarea {
+  min-height: 80px;
+  resize: vertical;
+}
+
+.modal-error {
+  color: var(--orange);
+  font-size: 13px;
+  margin-top: 12px;
+}
+
+.modal-submit {
+  background-color: var(--blue);
+  border-radius: 12px;
+  padding: 15px;
+  text-align: center;
+  margin-top: 24px;
+  color: var(--bg);
+  font-weight: 700;
+  font-size: 16px;
+}
+
+.modal-submit:disabled {
+  opacity: 0.6;
+}
+
+.modal-success {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 40px 0;
+  gap: 12px;
+}
+
+.modal-success__icon {
+  font-size: 48px;
+}
+
+.modal-success__text {
+  color: var(--text-primary);
+  font-size: 22px;
+  font-weight: 700;
+}
+
+.modal-success__sub {
+  color: var(--text-muted);
+  font-size: 14px;
+  text-align: center;
+  line-height: 1.4;
+  padding: 0 10px;
+}
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+@keyframes slideUp {
+  from {
+    transform: translateY(100%);
+  }
+  to {
+    transform: translateY(0);
+  }
+}

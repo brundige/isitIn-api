@@ -1,0 +1,174 @@
+.app {
+  min-height: 100%;
+  background-color: var(--bg);
+  display: flex;
+  flex-direction: column;
+  max-width: 720px;
+  margin: 0 auto;
+}
+
+.app__header {
+  padding: 10px 20px 0;
+}
+
+.app__header-top {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  gap: 10px;
+  padding-bottom: 10px;
+}
+
+.app__back {
+  color: var(--blue);
+  font-size: 36px;
+  line-height: 1;
+  font-weight: 300;
+  padding-right: 4px;
+}
+
+.app__refresh {
+  color: var(--blue);
+  font-size: 22px;
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.app__refresh:active {
+  background-color: var(--card);
+}
+
+.app__titles {
+  flex: 1;
+}
+
+.app__title {
+  color: var(--text-primary);
+  font-size: 24px;
+  font-weight: 800;
+  letter-spacing: 3px;
+}
+
+.app__subtitle {
+  color: var(--text-muted);
+  font-size: 11px;
+  letter-spacing: 1px;
+  text-transform: uppercase;
+  margin-top: 2px;
+}
+
+.app__divider {
+  height: 1px;
+  background-color: var(--card-border);
+  margin: 0 -20px;
+}
+
+.app__scroll {
+  padding-bottom: 40px;
+  display: flex;
+  flex-direction: column;
+}
+
+.app__section {
+  color: var(--text-muted);
+  font-size: 11px;
+  font-weight: 400;
+  letter-spacing: 2px;
+  text-transform: uppercase;
+  margin: 16px 0 8px 20px;
+}
+
+.app__chart-loader {
+  height: 200px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+}
+
+.app__chart-loader-text {
+  color: var(--text-muted);
+  font-size: 13px;
+}
+
+.app__legend {
+  display: flex;
+  flex-direction: row;
+  gap: 20px;
+  padding: 10px 16px;
+  background-color: var(--card);
+  border-top: 1px solid var(--card-border);
+}
+
+.app__legend-item {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  gap: 7px;
+}
+
+.app__legend-line {
+  width: 22px;
+  height: 3px;
+  border-radius: 2px;
+}
+
+.app__legend-dotted {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  gap: 3px;
+  width: 22px;
+}
+
+.app__legend-dot {
+  width: 4px;
+  height: 3px;
+  border-radius: 1px;
+}
+
+.app__legend-text {
+  color: var(--text-muted);
+  font-size: 12px;
+  font-weight: 500;
+}
+
+.app__error {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 32px;
+  gap: 20px;
+}
+
+.app__error-text {
+  color: var(--orange);
+  text-align: center;
+  line-height: 1.4;
+  font-size: 14px;
+  white-space: pre-wrap;
+}
+
+.app__retry {
+  background-color: var(--card);
+  padding: 12px 32px;
+  border-radius: 8px;
+  border: 1px solid var(--blue);
+  color: var(--blue);
+  font-weight: 600;
+}
+
+.app__no-runs {
+  color: var(--text-muted);
+  font-size: 13px;
+  text-align: center;
+  padding: 20px 16px;
+}

@@ -1,0 +1,15 @@
+# Container-side cloudflared config. Kept separate from ~/.cloudflared/config.yml
+# so the host-side launchd cloudflared (if you ever bring it back) is unaffected.
+#
+# Important: `service` URLs point at the Docker service name (`api`), not localhost.
+tunnel: dabe41e8-201f-4154-a20e-4ca2c366c9d8
+credentials-file: /etc/cloudflared/dabe41e8-201f-4154-a20e-4ca2c366c9d8.json
+
+ingress:
+  - hostname: api.brundigital.io
+    service: http://api:8000
+  - hostname: brundigital.io
+    service: http://api:8000
+  - hostname: www.brundigital.io
+    service: http://api:8000
+  - service: http_status:404
